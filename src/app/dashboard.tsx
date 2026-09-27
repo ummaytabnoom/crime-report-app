@@ -1,21 +1,21 @@
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  Alert,
-  RefreshControl,
+    Alert,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
 import { router, useFocusEffect } from "expo-router";
 
 import {
-  api,
-  clearToken,
+    api,
+    removeToken,
 } from "../services/api";
 
 import { COLORS } from "../constants/themes";
@@ -58,7 +58,7 @@ export default function Dashboard() {
       await api("/api/logout", "POST");
     } catch {}
 
-    await clearToken();
+    await removeToken();
 
     router.replace("/");
   }
