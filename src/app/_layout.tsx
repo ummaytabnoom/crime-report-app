@@ -1,18 +1,98 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
-
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <>
+      <StatusBar style="light" />
+
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: "#123B5D",
+          },
+
+          headerTintColor: "#FFFFFF",
+
+          headerTitleStyle: {
+            fontWeight: "700",
+          },
+
+          contentStyle: {
+            backgroundColor: "#F4F7FA",
+          },
+        }}
+      >
+        <Stack.Screen
+          name="index"
+          options={{
+            headerShown: false,
+          }}
+        />
+
+        <Stack.Screen
+          name="register"
+          options={{
+            title: "Create Account",
+          }}
+        />
+
+        <Stack.Screen
+          name="dashboard"
+          options={{
+            title: "Dashboard",
+          }}
+        />
+
+        <Stack.Screen
+          name="new-report"
+          options={{
+            title: "Report Crime",
+          }}
+        />
+
+        <Stack.Screen
+          name="my-reports"
+          options={{
+            title: "My Reports",
+          }}
+        />
+
+        <Stack.Screen
+          name="edit-report"
+          options={{
+            title: "Edit Report",
+          }}
+        />
+
+        <Stack.Screen
+          name="profile"
+          options={{
+            title: "My Profile",
+          }}
+        />
+
+        <Stack.Screen
+          name="admin"
+          options={{
+            title: "Admin Panel",
+          }}
+        />
+
+        <Stack.Screen
+          name="police"
+          options={{
+            title: "Police Panel",
+          }}
+        />
+
+        <Stack.Screen
+          name="directory"
+          options={{
+            title: "Directory",
+          }}
+        />
+      </Stack>
+    </>
   );
 }
