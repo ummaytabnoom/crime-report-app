@@ -45,7 +45,7 @@ export default function RegisterScreen() {
     try {
       setLoading(true);
 
-      const result = await api("/api/register", "POST", {
+      const result = await api("/api/auth/register", "POST", {
         fullName,
         userName,
         email,

@@ -1,15 +1,15 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import { router } from "expo-router";
@@ -23,38 +23,81 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+  console.log(process.env.EXPO_PUBLIC_API_URL);
+ 
+async function loginUser() {
+  if (!login.trim()) {
+    Alert.alert(
+      "Username Required",
+      "Please enter your username or email."
+    );
+    return;
+  }
 
-  async function loginUser() {
-    if (!login || !password) {
-      Alert.alert("Error", "Please enter username/email and password.");
+  if (!password) {
+    Alert.alert(
+      "Password Required",
+      "Please enter your password."
+    );
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const result = await api("/api/auth/login", "POST", {
+      userName: login.trim(),
+      password,
+    });
+
+    console.log(
+      "LOGIN RESPONSE JSON:",
+      JSON.stringify(result, null, 2)
+    );
+
+    const token = result?.data?.token;
+    const user = result?.data?.user;
+
+    if (!token || !user) {
+      Alert.alert(
+        "Login Error",
+        "Invalid login response from the server."
+      );
       return;
     }
 
-    try {
-      setLoading(true);
+    await saveToken(token);
 
-      const result = await api("/api/login", "POST", {
-        login,
-        password,
-      });
+    const role = String(user.ROLE || "").toUpperCase();
 
-      await saveToken(result.token);
+    console.log("USER ROLE:", role);
 
-      const role = result.user.role;
+    // Show success message
+    Alert.alert(
+      "Login Successful",
+      `Welcome, ${user.FULL_NAME || user.USER_NAME}!`
+    );
 
-      if (role === "ADMIN") {
-        router.replace("/admin");
-      } else if (role === "POLICE") {
-        router.replace("/police");
-      } else {
-        router.replace("/dashboard");
-      }
-    } catch (error: any) {
-      Alert.alert("Login Failed", error.message);
-    } finally {
-      setLoading(false);
+    // Redirect immediately
+    if (role === "ADMIN") {
+      router.push("/admin");
+    } else if (role === "POLICE") {
+      router.push("/police");
+    } else {
+      router.push("/dashboard");
     }
+
+  } catch (error: any) {
+    console.log("LOGIN ERROR:", error);
+
+    Alert.alert(
+      "Login Failed",
+      error?.message || "Username or password is incorrect."
+    );
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <KeyboardAvoidingView
