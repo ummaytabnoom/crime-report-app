@@ -1,38 +1,51 @@
-import {
-    useCallback,
-    useState,
-} from "react";
+import { useCallback, useState } from "react";
 
 import {
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
-import {
-    router,
-    useFocusEffect,
-} from "expo-router";
-
-import { api } from "../services/api";
+import { useFocusEffect } from "expo-router";
 
 import { COLORS } from "../constants/themes";
+import { api } from "../services/api";
 
 export default function MyReports() {
-  const [reports, setReports] =
-    useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   async function loadReports() {
     try {
-      const result =
-        await api("/api/my-reports");
+      setRefreshing(true);
 
-      setReports(result.reports);
+      const result = await api("/api/crimes/my");
+
+      console.log(
+        "MY REPORTS RESPONSE:",
+        JSON.stringify(result, null, 2)
+      );
+
+      // Backend returns { success: true, data: [...] }
+      const data = Array.isArray(result?.data)
+        ? result.data
+        : [];
+
+      setReports(data);
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      console.log("MY REPORTS ERROR:", error);
+
+      setReports([]);
+
+      Alert.alert(
+        "Error",
+        error?.message || "Could not load your reports."
+      );
+    } finally {
+      setRefreshing(false);
     }
   }
 
@@ -43,75 +56,95 @@ export default function MyReports() {
   );
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.heading}>
-        My Reports
-      </Text>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={loadReports}
+        />
+      }
+    >
+      <Text style={styles.title}>My Reports</Text>
 
       {reports.length === 0 ? (
-        <Text style={styles.empty}>
-          You have not submitted any reports.
-        </Text>
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>
+            You have not submitted any crime reports.
+          </Text>
+        </View>
       ) : (
-        reports.map((report) => (
+        reports.map((report, index) => (
           <View
-            key={report.crimeId}
+            key={report.CRIME_ID || index}
             style={styles.card}
           >
-            <Text style={styles.title}>
-              {report.category}
-            </Text>
-
-            <Text>
-              {report.description}
+            <Text style={styles.heading}>
+              Report #{report.CRIME_ID}
             </Text>
 
             <Text style={styles.info}>
-              Area: {report.area || "N/A"}
+              Category: {report.CATEGORY || "Not provided"}
             </Text>
 
             <Text style={styles.info}>
-              Status: {report.status}
+              Status: {report.STATUS || "Pending"}
             </Text>
 
             <Text style={styles.info}>
-              Admin:
-              {" "}
-              {report.acceptedBy || "Not assigned"}
+              Accepted: {report.ACCEPTED || "Not Accepted"}
             </Text>
 
             <Text style={styles.info}>
-              Police:
-              {" "}
-              {report.policeId || "Not assigned"}
+              Zilla: {report.ZILLA || "Not provided"}
             </Text>
 
-            {report.upgradedBy && (
+            <Text style={styles.info}>
+              Upazilla: {report.UPAZILLA || "Not provided"}
+            </Text>
+
+            <Text style={styles.info}>
+              Police Station:{" "}
+              {report.POLICE_STATION || "Not provided"}
+            </Text>
+
+            <Text style={styles.info}>
+              Area: {report.AREA || "Not provided"}
+            </Text>
+
+            <Text style={styles.info}>
+              Road: {report.ROAD_NAME || "Not provided"}
+            </Text>
+
+            <Text style={styles.info}>
+              Road No: {report.ROAD_NO || "Not provided"}
+            </Text>
+
+            <Text style={styles.info}>
+              Incident Date:{" "}
+              {report.DATE_OF_INCIDENT
+                ? String(report.DATE_OF_INCIDENT)
+                : "Not provided"}
+            </Text>
+
+            <Text style={styles.info}>
+              Police ID:{" "}
+              {report.POLICE_ID || "Not assigned"}
+            </Text>
+
+            <Text style={styles.info}>
+              Investigator:{" "}
+              {report.UPGRADED_BY || "Not assigned"}
+            </Text>
+
+            <Text style={styles.description}>
+              {report.DESCRIPTION || "No description"}
+            </Text>
+
+            {report.ACCEPTED_BY && (
               <Text style={styles.info}>
-                Investigated by:
-                {" "}
-                {report.upgradedBy}
+                Accepted by: {report.ACCEPTED_BY}
               </Text>
-            )}
-
-            {report.accepted === "PENDING" && (
-              <Pressable
-                style={styles.editButton}
-                onPress={() =>
-                  router.push({
-                    pathname: "/edit-report",
-                    params: {
-                      crimeId: String(
-                        report.crimeId
-                      ),
-                    },
-                  })
-                }
-              >
-                <Text style={styles.editText}>
-                  EDIT REPORT
-                </Text>
-              </Pressable>
             )}
           </View>
         ))
@@ -122,52 +155,59 @@ export default function MyReports() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
     padding: 16,
   },
 
-  heading: {
-    fontSize: 25,
-    fontWeight: "900",
-    color: COLORS.primary,
-    marginBottom: 15,
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 16,
   },
 
-  empty: {
-    textAlign: "center",
+  emptyBox: {
+    backgroundColor: COLORS.white,
+    padding: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+
+  emptyText: {
     color: COLORS.muted,
-    marginTop: 30,
+    fontSize: 15,
   },
 
   card: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 13,
-    marginBottom: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
 
-  title: {
-    fontSize: 17,
-    fontWeight: "900",
+  heading: {
+    fontSize: 18,
+    fontWeight: "700",
     color: COLORS.primary,
-    marginBottom: 7,
+    marginBottom: 10,
   },
 
   info: {
-    color: COLORS.muted,
-    fontSize: 12,
-    marginTop: 7,
+    fontSize: 14,
+    color: COLORS.text,
+    marginBottom: 6,
   },
 
-  editButton: {
-    backgroundColor: COLORS.secondary,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 12,
-  },
-
-  editText: {
-    color: "#fff",
-    fontWeight: "800",
+  description: {
+    fontSize: 14,
+    color: COLORS.text,
+    marginTop: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
 });

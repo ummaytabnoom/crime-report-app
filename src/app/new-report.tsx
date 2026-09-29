@@ -1,150 +1,185 @@
+import { Picker } from "@react-native-picker/picker";
+import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import { useState } from "react";
-
 import {
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
-import { Picker } from "@react-native-picker/picker";
-
-import * as ImagePicker from "expo-image-picker";
-
-import { router } from "expo-router";
-
 import AppButton from "../components/AppButton";
-
-import { api } from "../services/api";
-
 import {
-    COLORS,
-} from "../constants/themes";
-
-import {
-    CRIME_CATEGORIES,
-    UPAZILLAS,
-    ZILLAS,
+  CRIME_CATEGORIES,
+  UPAZILLAS,
+  ZILLAS,
 } from "../constants/locations";
+import { COLORS } from "../constants/themes";
+import { api } from "../services/api";
 
 export default function NewReport() {
   const [zilla, setZilla] = useState(ZILLAS[0]);
   const [upazilla, setUpazilla] = useState(UPAZILLAS[0]);
 
-  const [policeStation, setPoliceStation] =
-    useState("");
-
+  const [policeStation, setPoliceStation] = useState("");
   const [area, setArea] = useState("");
   const [roadName, setRoadName] = useState("");
   const [roadNo, setRoadNo] = useState("");
 
-  const [dateOfIncident, setDateOfIncident] =
-    useState(
-      new Date().toISOString().slice(0, 10)
-    );
+  const [dateOfIncident, setDateOfIncident] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
 
-  const [category, setCategory] =
-    useState(CRIME_CATEGORIES[0]);
+  const [category, setCategory] = useState(CRIME_CATEGORIES[0]);
+  const [description, setDescription] = useState("");
 
-  const [description, setDescription] =
-    useState("");
+  const [hideIdentity, setHideIdentity] = useState(false);
 
-  const [hideIdentity, setHideIdentity] =
-    useState(false);
-
-  const [media, setMedia] = useState<any>(null);
+  const [media, setMedia] = useState<{
+    base64: string | null;
+    type: "image" | "video";
+    name: string;
+  } | null>(null);
 
   const [loading, setLoading] = useState(false);
 
   async function chooseMedia() {
-    const result =
-      await ImagePicker.launchImageLibraryAsync({
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images", "videos"],
         allowsEditing: false,
         quality: 0.7,
         base64: true,
       });
 
-    if (!result.canceled) {
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
       const file = result.assets[0];
 
       setMedia({
-        base64: file.base64,
-        type:
-          file.type === "video"
-            ? "video"
-            : "image",
-        name: file.fileName,
+        base64: file.base64 || null,
+        type: file.type === "video" ? "video" : "image",
+        name: file.fileName || "evidence",
       });
+    } catch (error) {
+      console.log("MEDIA PICKER ERROR:", error);
+
+      Alert.alert(
+        "Media Error",
+        "Unable to select the image or video."
+      );
     }
   }
 
   async function submitReport() {
-    if (
-      !policeStation ||
-      !area ||
-      !description
-    ) {
-      Alert.alert(
-        "Missing Information",
-        "Please fill in police station, area and description."
-      );
-
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      await api("/api/reports", "POST", {
-        zilla,
-        upazilla,
-        policeStation,
-        area,
-        roadName,
-        roadNo,
-        dateOfIncident,
-        category,
-        description,
-        hideIdentity,
-
-        mediaBase64: media?.base64 || null,
-        mediaType: media?.type || null,
-      });
-
-      Alert.alert(
-        "Report Submitted",
-        "Your report is now waiting for admin approval.",
-        [
-          {
-            text: "OK",
-            onPress: () =>
-              router.replace("/my-reports"),
-          },
-        ]
-      );
-    } catch (error: any) {
-      Alert.alert(
-        "Submission Failed",
-        error.message
-      );
-    } finally {
-      setLoading(false);
-    }
+  if (!policeStation.trim()) {
+    Alert.alert(
+      "Missing Information",
+      "Please enter the police station."
+    );
+    return;
   }
+
+  if (!area.trim()) {
+    Alert.alert(
+      "Missing Information",
+      "Please enter the reported area."
+    );
+    return;
+  }
+
+  if (!description.trim()) {
+    Alert.alert(
+      "Missing Information",
+      "Please describe what happened."
+    );
+    return;
+  }
+
+  if (!dateOfIncident.trim()) {
+    Alert.alert(
+      "Missing Information",
+      "Please enter the incident date."
+    );
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const requestBody = {
+      zilla,
+      upazilla,
+      policeStation: policeStation.trim(),
+      area: area.trim(),
+      roadName: roadName.trim(),
+      roadNo: roadNo.trim(),
+      dateOfIncident: dateOfIncident.trim(),
+      category,
+      description: description.trim(),
+
+      hideIdentity: hideIdentity ? "Yes" : "No",
+
+      mediaFile: media?.base64 || null,
+      fileName: media?.name || "evidence",
+
+      mediaType: media
+        ? media.type.toUpperCase()
+        : null,
+    };
+
+    console.log("SUBMITTING REPORT...");
+
+    const result = await api(
+      "/api/crimes",
+      "POST",
+      requestBody
+    );
+
+    console.log(
+      "REPORT SUBMITTED:",
+      JSON.stringify(result, null, 2)
+    );
+
+    // IMPORTANT:
+    // If api() reaches this point without throwing,
+    // the request was successful.
+
+    setLoading(false);
+
+    // Go directly to My Reports
+    router.replace("/my-reports");
+
+  } catch (error: any) {
+    console.log("SUBMIT REPORT ERROR:", error);
+
+    setLoading(false);
+
+    Alert.alert(
+      "Submission Failed",
+      error?.message ||
+        "Failed to submit the crime report."
+    );
+  }
+}
 
   return (
     <ScrollView
       contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
     >
       <View style={styles.card}>
         <Text style={styles.title}>
           Submit Crime Report
         </Text>
 
+        {/* ZILLA */}
         <Text style={styles.label}>
           District / Zilla
         </Text>
@@ -152,7 +187,7 @@ export default function NewReport() {
         <View style={styles.picker}>
           <Picker
             selectedValue={zilla}
-            onValueChange={setZilla}
+            onValueChange={(value) => setZilla(value)}
           >
             {ZILLAS.map((item) => (
               <Picker.Item
@@ -164,6 +199,7 @@ export default function NewReport() {
           </Picker>
         </View>
 
+        {/* UPAZILLA */}
         <Text style={styles.label}>
           Upazilla
         </Text>
@@ -171,7 +207,9 @@ export default function NewReport() {
         <View style={styles.picker}>
           <Picker
             selectedValue={upazilla}
-            onValueChange={setUpazilla}
+            onValueChange={(value) =>
+              setUpazilla(value)
+            }
           >
             {UPAZILLAS.map((item) => (
               <Picker.Item
@@ -183,36 +221,42 @@ export default function NewReport() {
           </Picker>
         </View>
 
+        {/* POLICE STATION */}
         <Input
           placeholder="Police Station"
           value={policeStation}
           onChangeText={setPoliceStation}
         />
 
+        {/* AREA */}
         <Input
           placeholder="Reported Area"
           value={area}
           onChangeText={setArea}
         />
 
+        {/* ROAD NAME */}
         <Input
           placeholder="Road Name"
           value={roadName}
           onChangeText={setRoadName}
         />
 
+        {/* ROAD NUMBER */}
         <Input
           placeholder="Road Number"
           value={roadNo}
           onChangeText={setRoadNo}
         />
 
+        {/* INCIDENT DATE */}
         <Input
           placeholder="Incident Date YYYY-MM-DD"
           value={dateOfIncident}
           onChangeText={setDateOfIncident}
         />
 
+        {/* CATEGORY */}
         <Text style={styles.label}>
           Crime Category
         </Text>
@@ -220,7 +264,9 @@ export default function NewReport() {
         <View style={styles.picker}>
           <Picker
             selectedValue={category}
-            onValueChange={setCategory}
+            onValueChange={(value) =>
+              setCategory(value)
+            }
           >
             {CRIME_CATEGORIES.map((item) => (
               <Picker.Item
@@ -232,14 +278,17 @@ export default function NewReport() {
           </Picker>
         </View>
 
+        {/* DESCRIPTION */}
         <TextInput
           style={styles.description}
           placeholder="Describe what happened..."
           multiline
           value={description}
           onChangeText={setDescription}
+          textAlignVertical="top"
         />
 
+        {/* HIDE IDENTITY */}
         <Pressable
           style={styles.option}
           onPress={() =>
@@ -252,17 +301,19 @@ export default function NewReport() {
           </Text>
         </Pressable>
 
+        {/* MEDIA */}
         <Pressable
           style={styles.mediaButton}
           onPress={chooseMedia}
         >
           <Text style={styles.mediaText}>
             {media
-              ? "✓ Media Selected"
+              ? `✓ ${media.type === "video" ? "Video" : "Image"} Selected`
               : "Choose Image / Video"}
           </Text>
         </Pressable>
 
+        {/* SUBMIT */}
         <AppButton
           title="SUBMIT REPORT"
           onPress={submitReport}
@@ -277,7 +328,11 @@ function Input({
   placeholder,
   value,
   onChangeText,
-}: any) {
+}: {
+  placeholder: string;
+  value: string;
+  onChangeText: (text: string) => void;
+}) {
   return (
     <TextInput
       style={styles.input}
@@ -291,6 +346,7 @@ function Input({
 const styles = StyleSheet.create({
   container: {
     padding: 16,
+    paddingBottom: 40,
   },
 
   card: {
@@ -335,7 +391,6 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     padding: 12,
     height: 130,
-    textAlignVertical: "top",
     marginTop: 10,
   },
 

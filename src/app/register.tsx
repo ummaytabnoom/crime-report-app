@@ -1,12 +1,12 @@
 import { useState } from "react";
 
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import { router } from "expo-router";
@@ -28,47 +28,79 @@ export default function RegisterScreen() {
 
   const [loading, setLoading] = useState(false);
 
-  async function register() {
-    if (!fullName || !userName || !email || !password) {
-      Alert.alert("Error", "Please fill in all required fields.");
-      return;
-    }
-
-    if (password.length < 8) {
-      Alert.alert(
-        "Password",
-        "Password must contain at least 8 characters."
-      );
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const result = await api("/api/auth/register", "POST", {
-        fullName,
-        userName,
-        email,
-        password,
-        mobile,
-        dob: dob || null,
-        policeId: policeId || null,
-      });
-
-      await saveToken(result.token);
-
-      if (result.user.role === "POLICE") {
-        router.replace("/police");
-      } else {
-        router.replace("/dashboard");
-      }
-    } catch (error: any) {
-      Alert.alert("Registration Failed", error.message);
-    } finally {
-      setLoading(false);
-    }
+async function register() {
+  if (
+    !fullName.trim() ||
+    !userName.trim() ||
+    !email.trim() ||
+    !password
+  ) {
+    Alert.alert(
+      "Required Fields",
+      "Please fill in Full Name, Username, Email and Password."
+    );
+    return;
   }
 
+  if (password.length < 8) {
+    Alert.alert(
+      "Invalid Password",
+      "Password must contain at least 8 characters."
+    );
+    return;
+  }
+
+  if (!email.includes("@")) {
+    Alert.alert(
+      "Invalid Email",
+      "Please enter a valid email address."
+    );
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const result = await api("/api/auth/register", "POST", {
+      fullName: fullName.trim(),
+      userName: userName.trim(),
+      email: email.trim(),
+      password,
+      mobile: mobile.trim() || null,
+      dob: dob.trim() || null,
+      policeId: policeId.trim() || null,
+    });
+
+    console.log(
+      "REGISTER RESPONSE:",
+      JSON.stringify(result, null, 2)
+    );
+
+    // Save token if registration/login response contains one
+    const token = result?.data?.token;
+
+    if (token) {
+      await saveToken(token);
+      console.log("TOKEN SAVED");
+    }
+
+    console.log("REGISTRATION SUCCESS");
+    console.log("GOING TO DASHBOARD");
+
+    // Go directly to dashboard
+    router.replace("/dashboard");
+
+  } catch (error: any) {
+    console.log("REGISTER ERROR:", error);
+
+    Alert.alert(
+      "Registration Failed",
+      error?.message || "Unable to create account."
+    );
+  } finally {
+    setLoading(false);
+  }
+}
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
@@ -82,54 +114,72 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Full name *"
+          placeholderTextColor="#94A3B8"
           value={fullName}
           onChangeText={setFullName}
+          editable={!loading}
         />
 
         <TextInput
           style={styles.input}
           placeholder="Username *"
+          placeholderTextColor="#94A3B8"
           value={userName}
           onChangeText={setUserName}
           autoCapitalize="none"
+          autoCorrect={false}
+          editable={!loading}
         />
 
         <TextInput
           style={styles.input}
           placeholder="Email *"
+          placeholderTextColor="#94A3B8"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          editable={!loading}
         />
 
         <TextInput
           style={styles.input}
           placeholder="Password *"
+          placeholderTextColor="#94A3B8"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
+          editable={!loading}
         />
 
         <TextInput
           style={styles.input}
           placeholder="Mobile"
+          placeholderTextColor="#94A3B8"
           value={mobile}
           onChangeText={setMobile}
+          keyboardType="phone-pad"
+          editable={!loading}
         />
 
         <TextInput
           style={styles.input}
           placeholder="Date of Birth (YYYY-MM-DD)"
+          placeholderTextColor="#94A3B8"
           value={dob}
           onChangeText={setDob}
+          editable={!loading}
         />
 
         <TextInput
           style={styles.input}
           placeholder="Police ID (optional)"
+          placeholderTextColor="#94A3B8"
           value={policeId}
           onChangeText={setPoliceId}
           autoCapitalize="characters"
+          editable={!loading}
         />
 
         <AppButton
@@ -176,5 +226,6 @@ const styles = StyleSheet.create({
     padding: 13,
     marginBottom: 12,
     backgroundColor: "#fff",
+    color: COLORS.text,
   },
 });
