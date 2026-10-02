@@ -1,56 +1,151 @@
-# Welcome to your Expo app 👋
+# Crime Report Frontend
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Minimal Expo + React Native + Expo Router + React Native Paper frontend for the Crime Report API.
 
-## Get started
+## Requirements
 
-1. Install dependencies
+- Node.js 22+ for Expo SDK 57
+- Expo Go or an Android/iOS development environment
+- Crime Report backend running
 
-   ```bash
-   npm install
-   ```
+Expo SDK 57 uses React Native 0.86 and React 19.2.
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Setup
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Create `.env`:
 
-### Other setup steps
+```env
+EXPO_PUBLIC_API_URL=http://YOUR_COMPUTER_IP:3000/api
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+For a physical phone, do NOT use `localhost`. Use your computer's LAN IP, for example:
 
-## Learn more
+```env
+EXPO_PUBLIC_API_URL=http://192.168.1.10:3000/api
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+For an Android emulator, `10.0.2.2` normally points to the host machine:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```env
+EXPO_PUBLIC_API_URL=http://10.0.2.2:3000/api
+```
 
-## Join the community
+Then:
 
-Join our community of developers creating universal apps.
+```bash
+npx expo start --clear
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Project structure
+
+```text
+app/
+├── _layout.tsx
+├── index.tsx
+├── (auth)/
+│   ├── _layout.tsx
+│   ├── login.tsx
+│   └── register.tsx
+└── (app)/
+    ├── _layout.tsx
+    ├── home.tsx
+    ├── report.tsx
+    ├── my-reports.tsx
+    ├── global.tsx
+    ├── profile.tsx
+    ├── crime/
+    │   └── [id].tsx
+    ├── police/
+    │   ├── _layout.tsx
+    │   └── index.tsx
+    └── admin/
+        ├── _layout.tsx
+        ├── index.tsx
+        ├── reports.tsx
+        └── users.tsx
+
+src/
+├── api.ts
+├── types.ts
+├── storage.ts
+├── theme.ts
+├── context/
+│   └── AuthContext.tsx
+├── hooks/
+│   └── useApiList.ts
+└── components/
+    ├── AppHeader.tsx
+    ├── CrimeCard.tsx
+    ├── EmptyState.tsx
+    ├── ErrorBox.tsx
+    ├── Loading.tsx
+    ├── RoleBadge.tsx
+    └── Screen.tsx
+```
+
+## Theme
+
+The app automatically follows the device light/dark mode using React Native Paper.
+
+## Authentication model
+
+This frontend does not create JWTs or tokens.
+
+After login, it stores the returned user ID locally and sends:
+
+```http
+x-user-id: USER_ID
+```
+
+to protected backend routes.
+
+This matches the current simple backend architecture.
+
+## Important backend role names
+
+Roles are lowercase:
+
+```text
+public
+police
+admin
+```
+
+## Current frontend features
+
+### Public
+
+- Login
+- Registration
+- Police registration with police ID
+- Home
+- Create crime report
+- My reports
+- Public accepted reports
+- Report details
+- Profile
+- Sign out
+
+### Police
+
+- Police workspace
+- Pending report queue
+- Change report status:
+  - Pending
+  - Accepted
+  - Under Investigation
+
+### Admin
+
+- Admin workspace
+- Pending reports
+- Accept reports
+- User list
+- Change user role
+- Delete users
+
+The frontend intentionally avoids Redux, Zustand, React Query, Axios, complex service abstractions, or a large navigation system.
